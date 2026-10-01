@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wrench Words">
+<meta name="application-name" content="Wrench Words">
+<meta name="theme-color" content="#0f3940">
+<meta name="format-detection" content="telephone=no">
+<title>Wrench Words</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f3940'/%3E%3Cpolygon points='50,10 85,30 85,70 50,90 15,70 15,30' fill='%23f2a541'/%3E%3Ccircle cx='50' cy='50' r='16' fill='%230f3940'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#0f3940; --bg2:#14505a; --tile:#f6eedd; --tileText:#22343a; --shade:#f2a541; --shadeText:#2b1c06; --sel:#ffd84d; --ink:#22343a; --muted:#7c8b8f; --panel:#fbf7ee; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
+  body { position:fixed; inset:0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:#fff;
+    background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 60%); }
+  #app { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    padding: calc(env(safe-area-inset-top,0px) + 6px) 8px calc(env(safe-area-inset-bottom,0px) + 6px); }
+  header { width:100%; max-width:520px; display:flex; align-items:center; gap:6px; flex:0 0 auto; height:42px; }
+  header .title { flex:1; display:flex; align-items:center; gap:7px; font-weight:800; font-size:17px; letter-spacing:.3px; min-width:0; }
+  header .title small { font-weight:600; opacity:.75; font-size:14px; white-space:nowrap; }
+  .hbtn { height:36px; min-width:36px; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); color:#fff;
+    font:inherit; font-weight:700; font-size:15px; padding:0 10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .hbtn:active { background:rgba(255,255,255,.2); }
+  #modeBtn { font-size:12px; text-transform:uppercase; letter-spacing:1px; padding:0 9px; }
+  #boardWrap { flex:0 0 auto; width:100%; display:flex; justify-content:center; padding:4px 0 2px; position:relative; }
+  #board { position:relative; touch-action:none; }
+  .hex { position:absolute; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--tileText);
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background:var(--tile);
+    transition: opacity .35s, transform .35s, background .12s; pointer-events:none; }
+  .hex.start { background:var(--shade); color:var(--shadeText); }
+  .hex.sel { background:var(--sel); color:#2a2200; transform:scale(1.04); }
+  .hex.loc:not(.sel) { background:#9fe0c9; }
+  .hex.loc.start:not(.sel) { background:#6fcfa9; }
+  .hex.gone { opacity:0; transform:scale(.4); }
+  .hex.flash { background:#7fdc9b !important; }
+  .hex.wrong { background:#ff8f8f !important; }
+  #lineSvg { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+  #selBar { flex:0 0 auto; width:100%; max-width:520px; height:44px; display:flex; align-items:center; gap:8px; }
+  #preview { flex:1; height:36px; border-radius:10px; background:rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:20px; letter-spacing:3px; color:#fff; overflow:hidden; white-space:nowrap; }
+  #preview.good { background:#3fae6b; } #preview.bad { background:#d9534f; animation:shake .35s; } #preview.warn { background:#c98a1b; font-size:14px; letter-spacing:0; }
+  @keyframes shake { 20%,60% { transform:translateX(-6px); } 40%,80% { transform:translateX(6px); } }
+  .sbtn { height:36px; border-radius:10px; border:none; font:inherit; font-weight:800; font-size:14px; padding:0 12px; cursor:pointer; }
+  #clearBtn { background:rgba(255,255,255,.15); color:#fff; } #goBtn { background:var(--sel); color:#2a2200; } #hintBtn { background:#fff; color:var(--ink); }
+  .sbtn.hidden { display:none; }
+  #cats { flex:1 1 auto; width:100%; max-width:520px; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y;
+    background:var(--panel); color:var(--ink); border-radius:14px; padding:8px 10px 10px; }
+  .cat { padding:6px 0 7px; border-bottom:1px solid #ece4d2; }
+  .cat:last-child { border-bottom:none; }
+  .cat h3 { margin:0 0 5px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:6px; }
+  .cat h3 .dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+  .cat h3 .cnt { margin-left:auto; color:var(--muted); font-weight:700; font-size:12px; }
+  .cat.done h3 { color:var(--muted); }
+  .words { display:flex; flex-wrap:wrap; gap:6px 10px; }
+  .word { display:flex; gap:2px; padding:3px; border-radius:7px; border:2px solid transparent; cursor:pointer; }
+  .word.picked { border-color:#2f8fa0; background:#e5f3f5; }
+  .word b { width:15px; height:20px; border-bottom:2px solid #9aa7aa; font-size:14px; font-weight:800; display:flex; align-items:flex-end; justify-content:center; color:var(--ink); line-height:1; padding-bottom:1px; }
+  .word b.hint { color:#2f8fa0; }
+  .word b.easy { color:#a6b0b2; }
+  .word.found b { border-bottom-color:transparent; color:#fff; border-radius:3px; }
+  #overlay { position:fixed; inset:0; z-index:20; background:rgba(4,22,26,.72); display:none; align-items:center; justify-content:center; padding:14px; }
+  #overlay.on { display:flex; }
+  .card { background:var(--panel); color:var(--ink); border-radius:18px; padding:20px 20px 18px; width:min(94vw, 420px); max-height:92%; overflow-y:auto; touch-action:pan-y;
+    box-shadow:0 12px 40px rgba(0,0,0,.4); animation: cardIn .3s ease-out; }
+  @keyframes cardIn { from { transform:translateY(20px); opacity:0; } }
+  .card h1 { margin:0 0 8px; font-size:24px; } .card h2 { margin:14px 0 6px; font-size:16px; }
+  .card p, .card li { font-size:15px; line-height:1.45; } .card ul { padding-left:20px; margin:6px 0; }
+  .big { display:block; width:100%; border:none; border-radius:12px; padding:13px; font:inherit; font-weight:800; font-size:17px; background:var(--bg); color:#fff; cursor:pointer; margin-top:10px; }
+  .big.alt { background:#e7e0cf; color:var(--ink); }
+  .big:disabled { opacity:.4; }
+  .grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-top:10px; }
+  .pz { aspect-ratio:1; border-radius:12px; border:2px solid #d9d0bc; background:#fff; font:inherit; font-weight:800; font-size:17px; color:var(--ink); position:relative; cursor:pointer; padding:0; }
+  .pz.cur { border-color:#2f8fa0; }
+  .pz.done { background:#3fae6b; border-color:#3fae6b; color:#fff; }
+  .pz.prog { background:#fff4dc; border-color:var(--shade); }
+  .pz small { position:absolute; bottom:3px; left:0; right:0; font-size:9px; font-weight:700; letter-spacing:.5px; opacity:.8; }
+  .seg { display:flex; gap:6px; margin:8px 0; } .seg button { flex:1; padding:10px 4px; border-radius:10px; border:2px solid #d9d0bc; background:#fff; font:inherit; font-weight:800; font-size:14px; color:var(--ink); cursor:pointer; }
+  .seg button.on { background:var(--bg); border-color:var(--bg); color:#fff; }
+  .demo { display:flex; justify-content:center; margin:8px 0; }
+  #toast { position:fixed; left:50%; top:13%; transform:translateX(-50%); background:#fff; color:var(--ink); padding:10px 16px; border-radius:12px; font-weight:700; font-size:15px;
+    opacity:0; transition:opacity .25s; z-index:30; pointer-events:none; max-width:90vw; text-align:center; box-shadow:0 6px 20px rgba(0,0,0,.3); }
+  #toast.on { opacity:1; }
+  .muted { color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="hbtn" id="menuBtn" aria-label="All puzzles">&#9776;</button>
+    <div class="title"><svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true"><polygon points="50,6 88,28 88,72 50,94 12,72 12,28" fill="#f2a541"/><circle cx="50" cy="50" r="17" fill="#0f3940"/></svg>
+      <span>Wrench Words</span><small id="pzLabel">#1</small></div>
+    <button class="hbtn" id="modeBtn" aria-label="Difficulty">Medium</button>
+    <button class="hbtn" id="helpBtn" aria-label="How to play">?</button>
+  </header>
+  <div id="boardWrap"><div id="board"><svg id="lineSvg"><polyline id="line" fill="none" stroke="#ffd84d" stroke-opacity=".55" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  <div id="selBar">
+    <button class="sbtn hidden" id="clearBtn" aria-label="Clear selection">&#10005;</button>
+    <div id="preview"></div>
+    <button class="sbtn hidden" id="goBtn" aria-label="Submit word">Enter</button>
+    <button class="sbtn" id="hintBtn" aria-label="Hint">&#128161; Hint</button>
+  </div>
+  <div id="cats"></div>
+</div>
+<div id="toast"></div>
+<div id="overlay"><div class="card" id="card"></div></div>
+<script>
+(function () {
+'use strict';
+var PUZZLES = /*PUZZLES_START*/[]/*PUZZLES_END*/;
+var KEY = 'wrenchWords.save.v1';
+var COLORS = ['#e4572e', '#2f8fa0', '#7b5ea7', '#3fae6b', '#c98a1b', '#d6457f'];
+var MODES = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+var VOWELS = 'AEIOU';
+function $(id) { return document.getElementById(id); }
+function defaults() { return { cur: 0, def: 'medium', seenHelp: false, p: {} }; }
+var S = defaults();
+try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); if (o && typeof o.cur === 'number' && o.p) S = Object.assign(defaults(), o); } } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+var P = null, PS = null, cells = [], adj = [], sel = [], dragging = false, tapMode = false, gestureStart = 0;
+var geom = { w: 40, h: 46, centers: [] }, picked = -1, overlayOpen = false, toastT = 0, flashT = 0;
+
+function pstate(i) {
+  if (!S.p[i]) S.p[i] = { mode: S.def, found: [], hints: {}, hintsUsed: 0, done: false };
+  return S.p[i];
+}
+function isAdj(a, b) {
+  var dr = b.r - a.r, dc = b.c - a.c;
+  if (dr === 0) return Math.abs(dc) === 1;
+  if (Math.abs(dr) !== 1) return false;
+  return (a.r % 2 === 0) ? (dc === -1 || dc === 0) : (dc === 0 || dc === 1);
+}
+function wordOwner(ci) { for (var i = 0; i < P.words.length; i++) if (P.words[i][2].indexOf(ci) >= 0) return i; return -1; }
+function isGone(ci) { return PS.found.indexOf(wordOwner(ci)) >= 0; }
+
+/* ---------- puzzle setup ---------- */
+function startPuzzle(i) {
+  S.cur = Math.max(0, Math.min(PUZZLES.length - 1, i)); save();
+  P = PUZZLES[S.cur]; PS = pstate(S.cur); picked = -1; save();
+  $('pzLabel').textContent = '#' + (S.cur + 1) + ' of ' + PUZZLES.length;
+  $('modeBtn').textContent = MODES[PS.mode];
+  buildBoard(); clearSel(); renderCats();
+}
+function buildBoard() {
+  var b = $('board');
+  Array.prototype.slice.call(b.querySelectorAll('.hex')).forEach(function (e) { e.remove(); });
+  var starts = P.words.map(function (w) { return w[2][0]; });
+  cells = P.cells.map(function (c, i) {
+    var el = document.createElement('div'); el.className = 'hex' + (starts.indexOf(i) >= 0 ? ' start' : '');
+    el.textContent = c[2]; el.setAttribute('data-i', i); b.insertBefore(el, $('lineSvg'));
+    return { r: c[0], c: c[1], ch: c[2], el: el };
+  });
+  adj = cells.map(function (a) { return cells.map(function (bb, j) { return isAdj(a, bb) ? j : -1; }).filter(function (j) { return j >= 0; }); });
+  layoutBoard(); refreshBoard();
+}
+function layoutBoard() {
+  if (!P) return;
+  var COLS = 8, rows = P.rows;
+  var availW = Math.min(window.innerWidth - 16, 500);
+  var availH = Math.max(220, window.innerHeight * 0.5);
+  var w = Math.min(availW / (COLS + 0.5), availH / ((rows - 1) * 0.75 * 1.1547 + 1.1547), 58);
+  var h = w * 1.1547, gap = Math.max(2, w * 0.06);
+  geom = { w: w, h: h, centers: [] };
+  var b = $('board'); b.style.width = (w * (COLS + 0.5)) + 'px'; b.style.height = ((rows - 1) * 0.75 * h + h) + 'px';
+  cells.forEach(function (c, i) {
+    var x = c.c * w + (c.r % 2 ? w / 2 : 0), y = c.r * 0.75 * h, st = c.el.style;
+    st.left = (x + gap / 2) + 'px'; st.top = (y + gap / 2) + 'px'; st.width = (w - gap) + 'px'; st.height = (h - gap) + 'px';
+    st.fontSize = Math.round(w * 0.46) + 'px';
+    geom.centers[i] = { x: x + w / 2, y: y + h / 2 };
+  });
+  var svg = $('lineSvg'); svg.setAttribute('width', b.style.width); svg.setAttribute('height', b.style.height);
+  $('line').setAttribute('stroke-width', Math.round(w * 0.32));
+  drawLine();
+}
+function refreshBoard() {
+  var locCells = [];
+  P.words.forEach(function (w, wi) { var hh = PS.hints[wi]; if (hh && hh.loc && PS.found.indexOf(wi) < 0) locCells = locCells.concat(w[2]); });
+  cells.forEach(function (c, i) {
+    c.el.classList.toggle('gone', isGone(i));
+    c.el.classList.toggle('sel', sel.indexOf(i) >= 0);
+    c.el.classList.toggle('loc', locCells.indexOf(i) >= 0);
+  });
+}
+function renderCats() {
+  var html = '';
+  P.cats.forEach(function (name, ci) {
+    var ws = []; P.words.forEach(function (w, wi) { if (w[0] === ci) ws.push(wi); });
+    var nf = ws.filter(function (wi) { return PS.found.indexOf(wi) >= 0; }).length;
+    html += '<div class="cat' + (nf === ws.length ? ' done' : '') + '"><h3><span class="dot" style="background:' + COLORS[ci % COLORS.length] + '"></span>' + esc(name) +
+      '<span class="cnt">' + nf + '/' + ws.length + '</span></h3><div class="words">';
+    ws.forEach(function (wi) {
+      var word = P.words[wi][1], found = PS.found.indexOf(wi) >= 0, hh = PS.hints[wi] || {};
+      html += '<div class="word' + (found ? ' found' : '') + (picked === wi && !found ? ' picked' : '') + '" data-w="' + wi + '">';
+      for (var k = 0; k < word.length; k++) {
+        var ch = word[k], show = '', cls = '';
+        if (found) show = ch;
+        else if (PS.mode === 'easy') { show = ch; cls = 'easy'; }
+        else if (PS.mode === 'medium' && k === 0) show = ch;
+        if (!found && !show) {
+          if ((hh.v && VOWELS.indexOf(ch) >= 0) || (hh.l && k === word.length - 1)) { show = ch; cls = 'hint'; }
+        } else if (!found && cls === 'easy' && ((hh.v && VOWELS.indexOf(ch) >= 0) || (hh.l && k === word.length - 1))) cls = 'hint';
+        html += '<b class="' + cls + '"' + (found ? ' style="background:' + COLORS[ci % COLORS.length] + '"' : '') + '>' + show + '</b>';
+      }
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  $('cats').innerHTML = html;
+}
+
+/* ---------- selection ---------- */
+function drawLine() {
+  var pts = sel.map(function (i) { return geom.centers[i]; });
+  $('line').setAttribute('points', pts.map(function (p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' '));
+}
+function curWord() { return sel.map(function (i) { return cells[i].ch; }).join(''); }
+function renderSel() {
+  refreshBoard(); drawLine();
+  var pv = $('preview');
+  if (sel.length) { clearTimeout(flashT); pv.className = ''; pv.textContent = curWord(); }
+  else if (!flashT) { pv.className = ''; pv.textContent = ''; }
+  $('goBtn').classList.toggle('hidden', !(tapMode && sel.length));
+  $('clearBtn').classList.toggle('hidden', !(tapMode && sel.length));
+  $('hintBtn').classList.toggle('hidden', tapMode && sel.length > 0);
+}
+function clearSel() { sel = []; dragging = false; tapMode = false; renderSel(); }
+function localPt(x, y) { var r = $('board').getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; }
+function hit(p, f) {
+  var best = -1, bd = Infinity;
+  geom.centers.forEach(function (c, i) { if (isGone(i)) return; var d = Math.hypot(c.x - p.x, c.y - p.y); if (d < bd) { bd = d; best = i; } });
+  return bd <= geom.w * f ? best : -1;
+}
+function canAdd(i) { return sel.indexOf(i) < 0 && (!sel.length || adj[sel[sel.length - 1]].indexOf(i) >= 0); }
+function onStart(x, y) {
+  if (overlayOpen || !P) return;
+  var h = hit(localPt(x, y), 0.6);
+  if (h < 0) return;
+  if (tapMode && sel.length) {
+    if (sel[sel.length - 1] === h) { sel.pop(); if (!sel.length) tapMode = false; dragging = true; gestureStart = sel.length; renderSel(); return; }
+    if (!canAdd(h)) sel = [];
+  } else sel = [];
+  gestureStart = sel.length;
+  if (canAdd(h)) sel.push(h);
+  dragging = true; renderSel();
+}
+function onMove(x, y) {
+  if (!dragging) return;
+  var h = hit(localPt(x, y), 0.42);
+  if (h < 0) return;
+  if (sel.length >= 2 && sel[sel.length - 2] === h && sel.length > gestureStart) { sel.pop(); renderSel(); }
+  else if (canAdd(h)) { sel.push(h); renderSel(); }
+}
+function onEnd() {
+  if (!dragging) return;
+  dragging = false;
+  var dragged = sel.length - gestureStart >= 2 || (gestureStart === 0 && sel.length >= 2 && !tapMode);
+  if (dragged && sel.length >= 2) { submit(); return; }
+  tapMode = sel.length > 0; renderSel();
+}
+
+/* ---------- checking ---------- */
+function flash(text, cls) {
+  var pv = $('preview'); pv.textContent = text; pv.className = ''; void pv.offsetWidth; pv.className = cls;
+  clearTimeout(flashT); flashT = setTimeout(function () { flashT = 0; if (!sel.length) { pv.className = ''; pv.textContent = ''; } }, 1400);
+}
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 2200); }
+function samePath(a, b) { return a.length === b.length && a.every(function (x, i) { return x === b[i]; }); }
+function submit() {
+  var path = sel.slice(), w = curWord(); sel = []; tapMode = false; dragging = false;
+  var match = -1, wrongPath = false, already = false;
+  P.words.forEach(function (ww, wi) {
+    if (ww[1] !== w) return;
+    if (PS.found.indexOf(wi) >= 0) { already = true; return; }
+    if (samePath(ww[2], path)) match = wi; else wrongPath = true;
+  });
+  if (match >= 0) {
+    PS.found.push(match); if (picked === match) picked = -1; save();
+    path.forEach(function (ci) { cells[ci].el.classList.add('flash'); });
+    renderSel(); flash(w, 'good'); tone(523, 0.12); tone(784, 0.18, 0.08);
+    setTimeout(function () { path.forEach(function (ci) { cells[ci].el.classList.remove('flash'); }); refreshBoard(); }, 380);
+    renderCats();
+    var c = P.words[match][0];
+    if (P.words.every(function (x, wi) { return x[0] !== c || PS.found.indexOf(wi) >= 0; })) toast('\u2714 ' + P.cats[c] + ' complete');
+    if (PS.found.length === P.words.length) { PS.done = true; save(); setTimeout(solved, 700); }
+    return;
+  }
+  renderSel();
+  if (wrongPath) { flash('Right word, wrong path', 'warn'); toast('That answer is right, but it winds a different way through the tiles.'); tone(330, 0.15); return; }
+  if (already) { flash(w + ' \u2014 already found', 'warn'); return; }
+  path.forEach(function (ci) { cells[ci].el.classList.add('wrong'); });
+  setTimeout(function () { path.forEach(function (ci) { cells[ci].el.classList.remove('wrong'); }); }, 350);
+  flash(w, 'bad'); tone(150, 0.18, 0, 'square', 0.03);
+}
+
+/* ---------- hints ---------- */
+function hintTarget() {
+  if (picked >= 0 && PS.found.indexOf(picked) < 0) return picked;
+  for (var i = 0; i < P.words.length; i++) if (PS.found.indexOf(i) < 0) return i;
+  return -1;
+}
+function openHints() {
+  if (overlayOpen || !P) return;
+  var wi = hintTarget(); if (wi < 0) return;
+  var hh = PS.hints[wi] || {}, w = P.words[wi];
+  openCard('<h1>Hint</h1><p>For a <b>' + w[1].length + '-letter</b> answer in <b>' + esc(P.cats[w[0]]) + '</b>.' +
+    '<br><span class="muted">Tip: tap any answer slot below the board to choose which one to hint.</span></p>' +
+    '<button class="big" data-h="v"' + (hh.v ? ' disabled' : '') + '>Reveal the vowels</button>' +
+    '<button class="big" data-h="l"' + (hh.l ? ' disabled' : '') + '>Reveal the last letter</button>' +
+    '<button class="big" data-h="loc"' + (hh.loc ? ' disabled' : '') + '>Show its location</button>' +
+    '<button class="big alt" id="closeBtn">Cancel</button>');
+  Array.prototype.forEach.call($('card').querySelectorAll('[data-h]'), function (b) {
+    b.addEventListener('click', function () {
+      var h = PS.hints[wi] = PS.hints[wi] || {}; h[b.getAttribute('data-h')] = 1; PS.hintsUsed++; save();
+      closeCard(); picked = wi; renderCats(); refreshBoard(); tone(660, 0.12);
+    });
+  });
+  $('closeBtn').addEventListener('click', closeCard);
+}
+
+/* ---------- overlays ---------- */
+function openCard(html) { $('card').innerHTML = html; $('overlay').classList.add('on'); overlayOpen = true; clearSel(); $('card').scrollTop = 0; }
+function closeCard() { $('overlay').classList.remove('on'); overlayOpen = false; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function demoSvg() {
+  var pts = [[0,0,'B'],[1,0,'O'],[1,1,'L'],[2,1,'T'],[0,1,'N'],[2,0,'X']], w = 34, h = w * 1.1547, out = '';
+  var path = [[0,0],[1,0],[1,1],[2,1]];
+  function ctr(c, r) { return [c * w + (r % 2 ? w / 2 : 0) + w / 2 + 2, r * 0.75 * h + h / 2 + 2]; }
+  pts.forEach(function (p) { var c = ctr(p[0], p[1]), x = c[0], y = c[1], hx = (w - 3) / 2, hy = (h - 3) / 2;
+    var poly = [[x, y - hy], [x + hx, y - hy / 2], [x + hx, y + hy / 2], [x, y + hy], [x - hx, y + hy / 2], [x - hx, y - hy / 2]].map(function (q) { return q.join(','); }).join(' ');
+    var start = p[0] === 0 && p[1] === 0, inPath = path.some(function (q) { return q[0] === p[0] && q[1] === p[1]; });
+    out += '<polygon points="' + poly + '" fill="' + (start ? '#f2a541' : inPath ? '#ffe79a' : '#efe6d2') + '"/><text x="' + x + '" y="' + (y + 6) + '" text-anchor="middle" font-weight="800" font-size="17" fill="#22343a">' + p[2] + '</text>'; });
+  var line = path.map(function (q) { return ctr(q[0], q[1]).join(','); }).join(' ');
+  return '<svg width="' + (3.5 * w + 4) + '" height="' + (h * 1.75 + 4) + '"><polyline points="' + line + '" fill="none" stroke="#e4572e" stroke-opacity=".45" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>' + out + '</svg>';
+}
+function showHelp() {
+  S.seenHelp = true; save();
+  openCard('<h1>How to play</h1>' +
+    '<p>Every puzzle hides a set of themed answers in a honeycomb of letter tiles. Each <b>category</b> is listed under the board with a blank for every answer.</p>' +
+    '<div class="demo">' + demoSvg() + '</div>' +
+    '<ul><li><b>Orange tiles</b> are where answers begin. Every answer starts on one.</li>' +
+    '<li>Answers wind through <b>touching tiles</b> in any direction and can bend at every step.</li>' +
+    '<li><b>Drag</b> across tiles to spell an answer, or <b>tap</b> tiles one at a time and press <b>Enter</b>. Drag back (or tap the last tile again) to undo a letter.</li>' +
+    '<li>Found answers drop off the board. <b>Every tile belongs to exactly one answer</b>, so the puzzle is solved when the board is empty.</li>' +
+    '<li>If you spell a right answer along the wrong route, you\u2019ll be told. Only one arrangement uses every tile.</li></ul>' +
+    '<h2>Difficulty</h2><ul><li><b>Easy</b>: every answer is listed. It\u2019s a pure hunt.</li><li><b>Medium</b>: you only see each answer\u2019s first letter and length.</li><li><b>Hard</b>: just blanks. Work out the answers from the category alone.</li></ul>' +
+    '<p class="muted">To change difficulty, tap the difficulty button. That restarts the puzzle.</p>' +
+    '<h2>Hints</h2><p>Tap an answer\u2019s blanks to choose it, then press <b>Hint</b> to reveal its vowels, its last letter, or its location on the board.</p>' +
+    '<button class="big" id="closeBtn">Let\u2019s play</button>');
+  $('closeBtn').addEventListener('click', closeCard);
+}
+function showMenu() {
+  var solved = 0, g = '';
+  PUZZLES.forEach(function (_, i) {
+    var s = S.p[i], cls = 'pz' + (i === S.cur ? ' cur' : '');
+    if (s && s.done) { cls += ' done'; solved++; } else if (s && s.found.length) cls += ' prog';
+    g += '<button class="' + cls + '" data-p="' + i + '">' + (i + 1) + (s && (s.done || s.found.length) ? '<small>' + MODES[s.mode].toUpperCase() + '</small>' : '') + '</button>';
+  });
+  openCard('<h1>Puzzles</h1><p class="muted" style="margin:0">' + solved + ' of ' + PUZZLES.length + ' solved. Green = solved, amber = in progress.</p><div class="grid">' + g + '</div>' +
+    '<h2>Default difficulty for new puzzles</h2><div class="seg">' + Object.keys(MODES).map(function (m) { return '<button data-m="' + m + '" class="' + (S.def === m ? 'on' : '') + '">' + MODES[m] + '</button>'; }).join('') + '</div>' +
+    '<button class="big alt" id="closeBtn">Close</button><button class="big alt" id="helpBtn2">How to play</button>' +
+    '<p class="muted" style="text-align:center"><a href="#" id="wipeBtn" style="color:#a33">Reset all progress</a></p>');
+  Array.prototype.forEach.call($('card').querySelectorAll('[data-p]'), function (b) { b.addEventListener('click', function () { closeCard(); startPuzzle(+b.getAttribute('data-p')); }); });
+  Array.prototype.forEach.call($('card').querySelectorAll('[data-m]'), function (b) { b.addEventListener('click', function () { S.def = b.getAttribute('data-m'); save(); showMenu(); }); });
+  $('closeBtn').addEventListener('click', closeCard);
+  $('helpBtn2').addEventListener('click', showHelp);
+  $('wipeBtn').addEventListener('click', function (e) { e.preventDefault(); if (window.confirm('Erase progress on every puzzle?')) { var d = S.def; S = defaults(); S.def = d; S.seenHelp = true; save(); closeCard(); startPuzzle(0); } });
+}
+function showMode() {
+  openCard('<h1>Difficulty</h1><p>Currently <b>' + MODES[PS.mode] + '</b>. Choosing a difficulty <b>restarts this puzzle</b>.</p>' +
+    '<div class="seg">' + Object.keys(MODES).map(function (m) { return '<button data-m="' + m + '" class="' + (PS.mode === m ? 'on' : '') + '">' + MODES[m] + '</button>'; }).join('') + '</div>' +
+    '<p class="muted">Easy: all answers listed. Medium: first letters. Hard: blanks only.</p><button class="big alt" id="closeBtn">Cancel</button>');
+  Array.prototype.forEach.call($('card').querySelectorAll('[data-m]'), function (b) {
+    b.addEventListener('click', function () {
+      var m = b.getAttribute('data-m');
+      if (PS.found.length && !window.confirm('Restart this puzzle in ' + MODES[m] + '?')) return;
+      S.p[S.cur] = { mode: m, found: [], hints: {}, hintsUsed: 0, done: false }; save(); closeCard(); startPuzzle(S.cur);
+    });
+  });
+  $('closeBtn').addEventListener('click', closeCard);
+}
+function solved() {
+  var n = S.cur + 1, next = -1;
+  for (var k = 1; k <= PUZZLES.length; k++) { var j = (S.cur + k) % PUZZLES.length; if (!(S.p[j] && S.p[j].done)) { next = j; break; } }
+  [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.25, i * 0.11, 'triangle', 0.07); });
+  openCard('<h1>Puzzle ' + n + ' solved!</h1><p>Board cleared on <b>' + MODES[PS.mode] + '</b>' + (PS.hintsUsed ? ' with ' + PS.hintsUsed + ' hint' + (PS.hintsUsed > 1 ? 's' : '') : ' with <b>no hints</b>') + '.</p>' +
+    (next >= 0 ? '<button class="big" id="nextBtn">Next puzzle (#' + (next + 1) + ')</button>' : '<p><b>You\u2019ve solved every puzzle. Impressive!</b></p>') +
+    '<button class="big alt" id="menuBtn2">All puzzles</button>');
+  if (next >= 0) $('nextBtn').addEventListener('click', function () { closeCard(); startPuzzle(next); });
+  $('menuBtn2').addEventListener('click', showMenu);
+}
+
+/* ---------- sound ---------- */
+var ac = null;
+function audioInit() { if (ac) { if (ac.state === 'suspended') ac.resume(); return; } try { var A = window.AudioContext || window.webkitAudioContext; if (A) ac = new A(); } catch (e) { ac = null; } }
+function tone(f, d, t, type, v) {
+  if (!ac) return; t = t || 0;
+  try { var o = ac.createOscillator(), g = ac.createGain(), now = ac.currentTime + t; o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(v || 0.06, now); g.gain.exponentialRampToValueAtTime(0.0001, now + d); o.connect(g); g.connect(ac.destination); o.start(now); o.stop(now + d + 0.03); } catch (e) {}
+}
+
+/* ---------- events ---------- */
+var board = $('board'), activeTouch = null;
+board.addEventListener('touchstart', function (e) { e.preventDefault(); audioInit(); if (activeTouch !== null) return; var t = e.changedTouches[0]; activeTouch = t.identifier; onStart(t.clientX, t.clientY); }, { passive: false });
+board.addEventListener('touchmove', function (e) { e.preventDefault(); for (var i = 0; i < e.changedTouches.length; i++) { var t = e.changedTouches[i]; if (t.identifier === activeTouch) onMove(t.clientX, t.clientY); } }, { passive: false });
+function tEnd(e) { e.preventDefault(); for (var i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === activeTouch) { activeTouch = null; onEnd(); } }
+board.addEventListener('touchend', tEnd, { passive: false });
+board.addEventListener('touchcancel', tEnd, { passive: false });
+board.addEventListener('mousedown', function (e) { if (e.button === 0) { e.preventDefault(); audioInit(); onStart(e.clientX, e.clientY); } });
+window.addEventListener('mousemove', function (e) { if (dragging) onMove(e.clientX, e.clientY); });
+window.addEventListener('mouseup', function () { onEnd(); });
+document.addEventListener('touchmove', function (e) { if (!(e.target.closest && e.target.closest('#cats, .card'))) e.preventDefault(); }, { passive: false });
+['gesturestart', 'dblclick', 'contextmenu'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
+$('cats').addEventListener('click', function (e) {
+  var el = e.target.closest && e.target.closest('.word'); if (!el) return;
+  var wi = +el.getAttribute('data-w'); if (PS.found.indexOf(wi) >= 0) return;
+  picked = picked === wi ? -1 : wi; renderCats();
+});
+$('goBtn').addEventListener('click', function () { if (sel.length >= 2) submit(); else clearSel(); });
+$('clearBtn').addEventListener('click', clearSel);
+$('hintBtn').addEventListener('click', function () { audioInit(); openHints(); });
+$('menuBtn').addEventListener('click', showMenu);
+$('helpBtn').addEventListener('click', showHelp);
+$('modeBtn').addEventListener('click', showMode);
+$('overlay').addEventListener('click', function (e) { if (e.target === $('overlay')) closeCard(); });
+var rT = 0; window.addEventListener('resize', function () { clearTimeout(rT); rT = setTimeout(layoutBoard, 60); });
+
+window.__wrench = {
+  state: function () { return JSON.parse(JSON.stringify(S)); },
+  puzzle: function () { return P; },
+  cellCenter: function (i) { var r = cells[i].el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+};
+startPuzzle(S.cur);
+if (!S.seenHelp) showHelp();
+})();
+</script>
+</body>
+</html>
